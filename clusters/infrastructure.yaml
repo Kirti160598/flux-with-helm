@@ -1,0 +1,40 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-controllers
+  namespace: helm-stag-flux-ns
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: helm-stag-flux-ns
+  path: ./infrastructure/controllers
+  prune: true
+  wait: true
+---
+apiversion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-configs
+  namespace: helm-stag-flux-ns
+spec:
+  dependsOn:
+    - name: infra-controllers
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: helm-stag-flux-ns
+  path: ./infrastructure/configs
+  prune: true
+  patches:
+    - patch: |
+        - op: replace
+          path: /spec/acme/server
+          value: https://acme-staging-v02.api.letsencrypt.org/directory
+      target:
+        kind: ClusterIssuer
+        name: letsencrypt

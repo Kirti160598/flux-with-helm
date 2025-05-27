@@ -1,0 +1,8 @@
+apiversion: kustomize.config.k8s.io/v1beta1
+kind: kustomization
+resources:
+  - ../base/podinfo
+patches:
+  - path: podinfo-values.yaml
+    target:
+      kind: HelmRelease
