@@ -10,7 +10,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: flux-system
+    name: helm-prod-flux-ns
   path: ./infrastructure/controllers
   prune: true
   wait: true
@@ -28,7 +28,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: flux-system
+    name: helm-prod-flux-ns
   path: ./infrastructure/configs
   prune: true
   patches:
