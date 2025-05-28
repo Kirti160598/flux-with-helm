@@ -31,5 +31,5 @@ spec:
         name: cert-manager
         namespace: cert-manager
       interval: 12h
-    values:
+  values:
       installCRDs:true
