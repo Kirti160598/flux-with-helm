@@ -34,7 +34,7 @@ spec:
   values:
     controller:
       service:
-        type: "NodePort"
+        type: "LoadBalancer"
     admissionWebhooks:
-      enables: false
+      enabled: false
       
