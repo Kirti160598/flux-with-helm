@@ -1,0 +1,83 @@
+
+name: Create EKS Cluster
+
+on: workflow_dispatch
+
+env:
+  AWS_REGION: us-east-1
+  NODE_TYPE: t3.medium
+  GIT_OWNER: Kirti160598
+  GIT_REPO: flux-with-helm
+  NODE_COUNT: 1
+  GIT_BRANCH: main
+  K8S_VERSION: "1.28"
+  CLUSTER_NAME: github-eks-cluster-nodeport
+
+jobs:
+  create-eks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install eksctl
+        run: |
+          curl --silent --location "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+          sudo mv /tmp/eksctl /usr/local/bin
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+      - name: Create Namespace
+        run: |
+          kubectl create namespace my-namespace-ns || echo "Namespace already exists"
+          kubectl create namespace helm-stag-flux-ns || echo "Namespace already exists"
+      - name: Verify Cluster Access
+        run: |
+          kubectl get nodes
+          kubectl get svc
+          kubectl get pods -n ingress-nginx
+          kubectl get svc -n ingress-nginx
+          kubectl get pods -n my-namespace-ns
+          kubectl get deploy -A
+          kubectl get svc -A
+      - name: Install Flux CLI
+        run: |
+          curl -s https://fluxcd.io/install.sh | sudo bash
+      - name: Flux Bootstrap GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.FLUX_GITHUB_TOKEN }}
+        run: |
+          flux bootstrap github \
+            --owner=$GIT_OWNER \
+            --repository=$GIT_REPO \
+            --branch=$GIT_BRANCH \
+            --path=clusters/staging \
+            --namespace=my-namespace-ns \
+            --personal
+      - name: Get EKS Worker Node Public IP
+        run: |
+          NODE_INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:eks:cluster-name,Values=$CLUSTER_NAME" "Name=instance-state-name,Values=running" \
+            --query "Reservations[*].Instances[*].InstanceId" \
+            --output text)
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --instance-ids $NODE_INSTANCE_ID \
+            --query "Reservations[*].Instances[*].PublicIpAddress" \
+            --output text)
+          echo "Public Node IP: $PUBLIC_IP"
+          echo "➡️ You can access the app via: http://$PUBLIC_IP:30080"
+          echo "⚠️  Make sure to add this to your /etc/hosts:  $PUBLIC_IP  podinfo.staging"
+           # Add entry to /etc/hosts (for curl or internal use inside runner)
+          echo "$PUBLIC_IP podinfo.staging" | sudo tee -a /etc/hosts
+          # (Optional) Test with curl inside the runner
+          curl -H "Host: podinfo.staging" http://af63475e513704c7cbc2da0565b1b8c3-431437744.us-east-1.elb.amazonaws.com
