@@ -67,6 +67,7 @@ jobs:
           kubectl get pods -n my-namespace-ns-1
           kubectl get deploy -A
           kubectl get svc -A
+          kubectl get deploy -A
           
       - name: Get EKS Worker Node Public IP
         run: |
