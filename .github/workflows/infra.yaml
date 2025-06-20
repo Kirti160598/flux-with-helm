@@ -29,6 +29,18 @@ jobs:
         run: |
           curl --silent --location "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
+      - name: Create EKS Cluster
+        run: |
+          eksctl create cluster \
+            --name $CLUSTER_NAME \
+            --version $K8S_VERSION \
+            --region $AWS_REGION \
+            --nodegroup-name standard-workers \
+            --node-type $NODE_TYPE \
+            --nodes $NODE_COUNT \
+            --nodes-min 1 \
+            --nodes-max 1 \
+            --managed
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
