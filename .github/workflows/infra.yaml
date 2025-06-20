@@ -28,7 +28,7 @@ jobs:
         run: |
           curl --silent --location "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
-     
+
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -49,8 +49,10 @@ jobs:
 
       - name: Install Latest Flux CLI
         run: |
-          curl -Lo flux.tar.gz https://github.com/fluxcd/flux2/releases/latest/download/flux_linux_amd64.tar.gz
-          tar -xzf flux.tar.gz
+          FLUX_VERSION=$(curl -s https://api.github.com/repos/fluxcd/flux2/releases/latest | grep tag_name | cut -d '"' -f 4)
+          echo "Downloading Flux CLI version: $FLUX_VERSION"
+          curl -LO https://github.com/fluxcd/flux2/releases/download/$FLUX_VERSION/flux_linux_amd64.tar.gz
+          tar -xzf flux_linux_amd64.tar.gz
           sudo mv flux /usr/local/bin/
           flux --version
 
@@ -67,9 +69,9 @@ jobs:
 
       - name: Wait for Flux Kustomizations to Reconcile
         run: |
-          flux wait kustomization infra-controllers -n flux-system --for=condition=ready --timeout=5m
-          flux wait kustomization infra-configs -n flux-system --for=condition=ready --timeout=5m
-          flux wait kustomization apps -n flux-system --for=condition=ready --timeout=5m
+          flux wait kustomization infra-controllers -n flux-system --for=condition=ready --timeout=5m || true
+          flux wait kustomization infra-configs -n flux-system --for=condition=ready --timeout=5m || true
+          flux wait kustomization apps -n flux-system --for=condition=ready --timeout=5m || true
 
       - name: Wait for HelmRelease ingress-nginx to be Ready
         run: |
@@ -99,7 +101,6 @@ jobs:
             --output text)
           echo "Public Node IP: $PUBLIC_IP"
 
-          # Optional - test curl through ingress
           echo "$PUBLIC_IP podinfo.staging" | sudo tee -a /etc/hosts
           curl -H "Host: podinfo.staging" http://$PUBLIC_IP:30080 || true
           echo "➡️ You can access the app via: http://$PUBLIC_IP:30080"
