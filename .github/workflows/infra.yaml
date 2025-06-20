@@ -61,9 +61,11 @@ jobs:
             --owner=$GIT_OWNER \
             --repository=$GIT_REPO \
             --branch=$GIT_BRANCH \
-            --path=clusters \
+            --path=clusters/staging \
             --namespace=helm-stag-flux-ns \
             --personal
+          flux get helmreleases --all-namespaces
+          
       - name: Get EKS Worker Node Public IP
         run: |
           NODE_INSTANCE_ID=$(aws ec2 describe-instances \
@@ -75,6 +77,8 @@ jobs:
             --query "Reservations[*].Instances[*].PublicIpAddress" \
             --output text)
           echo "Public Node IP: $PUBLIC_IP"
+          kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 8080:80 &
+          curl -H "Host: podinfo.staging" http://localhost:8080
           echo "➡️ You can access the app via: http://$PUBLIC_IP:30080"
           echo "⚠️  Make sure to add this to your /etc/hosts:  $PUBLIC_IP  podinfo.staging"
            # Add entry to /etc/hosts (for curl or internal use inside runner)
