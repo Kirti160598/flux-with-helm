@@ -47,9 +47,12 @@ jobs:
         run: |
           kubectl get nodes
 
-      - name: Install Flux CLI
+      - name: Install Latest Flux CLI
         run: |
-          curl -s https://fluxcd.io/install.sh | sudo bash
+         curl -s https://fluxcd.io/install.sh | bash
+         sudo mv ./flux /usr/local/bin/flux
+         flux --version
+
 
       - name: Flux Bootstrap GitHub
         env:
