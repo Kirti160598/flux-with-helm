@@ -62,7 +62,7 @@ jobs:
             --repository=$GIT_REPO \
             --branch=$GIT_BRANCH \
             --path=clusters \
-            --namespace=my-namespace-ns \
+            --namespace=helm-stag-flux-ns \
             --personal
       - name: Get EKS Worker Node Public IP
         run: |
