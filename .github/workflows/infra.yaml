@@ -96,12 +96,10 @@ jobs:
             --filters "Name=tag:eks:cluster-name,Values=$CLUSTER_NAME" "Name=instance-state-name,Values=running" \
             --query "Reservations[*].Instances[*].InstanceId" \
             --output text)
-
           PUBLIC_IP=$(aws ec2 describe-instances \
             --instance-ids $NODE_INSTANCE_ID \
             --query "Reservations[*].Instances[*].PublicIpAddress" \
             --output text)
-
           echo "Public Node IP: $PUBLIC_IP"
           echo "$PUBLIC_IP podinfo.staging" | sudo tee -a /etc/hosts
           curl -H "Host: podinfo.staging" http://$PUBLIC_IP:30080 || true
