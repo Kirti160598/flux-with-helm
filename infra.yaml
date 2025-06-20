@@ -80,4 +80,5 @@ jobs:
            # Add entry to /etc/hosts (for curl or internal use inside runner)
           echo "$PUBLIC_IP podinfo.staging" | sudo tee -a /etc/hosts
           # (Optional) Test with curl inside the runner
-          curl -H "Host: podinfo.staging" http://af63475e513704c7cbc2da0565b1b8c3-431437744.us-east-1.elb.amazonaws.com
+          curl -H "Host: podinfo.staging" http://$PUBLIC_IP:30080
+
