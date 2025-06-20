@@ -49,11 +49,9 @@ jobs:
 
       - name: Install Latest Flux CLI
         run: |
-         curl -s https://fluxcd.io/install.sh | bash
-         sudo mv ./flux /usr/local/bin/flux
+         curl -sL https://github.com/fluxcd/flux2/releases/latest/download/flux_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz | tar -xz
+         sudo mv flux /usr/local/bin/
          flux --version
-
-
       - name: Flux Bootstrap GitHub
         env:
           GITHUB_TOKEN: ${{ secrets.FLUX_GITHUB_TOKEN }}
