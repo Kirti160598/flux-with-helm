@@ -41,7 +41,6 @@ jobs:
       - name: Create Namespace
         run: |
           kubectl create namespace my-namespace-ns-1 || echo "Namespace already exists"
-          kubectl create namespace helm-stag-flux-ns || echo "Namespace already exists"
       - name: Verify Cluster Access
         run: |
           kubectl get nodes
@@ -58,7 +57,6 @@ jobs:
             --repository=$GIT_REPO \
             --branch=$GIT_BRANCH \
             --path=clusters/staging \
-            --namespace=helm-stag-flux-ns \
             --personal
           flux get helmreleases --all-namespaces
           flux get kustomizations -A
