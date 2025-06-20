@@ -1,4 +1,3 @@
-
 name: Create EKS Cluster
 
 on: workflow_dispatch
@@ -35,19 +34,23 @@ jobs:
           curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
+
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+
       - name: Create Namespace
         run: |
           kubectl create namespace my-namespace-ns-1 || echo "Namespace already exists"
+
       - name: Verify Cluster Access
         run: |
           kubectl get nodes
-       
+
       - name: Install Flux CLI
         run: |
           curl -s https://fluxcd.io/install.sh | sudo bash
+
       - name: Flux Bootstrap GitHub
         env:
           GITHUB_TOKEN: ${{ secrets.FLUX_GITHUB_TOKEN }}
@@ -58,6 +61,19 @@ jobs:
             --branch=$GIT_BRANCH \
             --path=clusters/staging \
             --personal
+
+      - name: Wait for Flux Kustomizations to Reconcile
+        run: |
+          flux wait kustomization infra-controllers -n flux-system --for=condition=ready --timeout=5m
+          flux wait kustomization infra-configs -n flux-system --for=condition=ready --timeout=5m
+          flux wait kustomization apps -n flux-system --for=condition=ready --timeout=5m
+
+      - name: Wait for HelmRelease ingress-nginx to be Ready
+        run: |
+          flux wait helmrelease ingress-nginx -n ingress-nginx --for=condition=ready --timeout=5m || true
+
+      - name: Check Cluster Resources
+        run: |
           flux get helmreleases --all-namespaces
           flux get kustomizations -A
           flux get sources helm -A
@@ -67,9 +83,8 @@ jobs:
           kubectl get pods -n my-namespace-ns-1
           kubectl get deploy -A
           kubectl get svc -A
-          kubectl get deploy -A
-          
-      - name: Get EKS Worker Node Public IP
+
+      - name: Get EKS Worker Node Public IP and Test App
         run: |
           NODE_INSTANCE_ID=$(aws ec2 describe-instances \
             --filters "Name=tag:eks:cluster-name,Values=$CLUSTER_NAME" "Name=instance-state-name,Values=running" \
@@ -80,12 +95,9 @@ jobs:
             --query "Reservations[*].Instances[*].PublicIpAddress" \
             --output text)
           echo "Public Node IP: $PUBLIC_IP"
-          kubectl -n ingress-nginx port-forward svc/ingress-nginx-controller 8080:80 &
-          curl -H "Host: podinfo.staging" http://localhost:8080
-          echo "➡️ You can access the app via: http://$PUBLIC_IP:30080"
-          echo "⚠️  Make sure to add this to your /etc/hosts:  $PUBLIC_IP  podinfo.staging"
-           # Add entry to /etc/hosts (for curl or internal use inside runner)
-          echo "$PUBLIC_IP podinfo.staging" | sudo tee -a /etc/hosts
-          # (Optional) Test with curl inside the runner
-          curl -H "Host: podinfo.staging" http://$PUBLIC_IP:30080
 
+          # Optional - test curl through ingress
+          echo "$PUBLIC_IP podinfo.staging" | sudo tee -a /etc/hosts
+          curl -H "Host: podinfo.staging" http://$PUBLIC_IP:30080 || true
+          echo "➡️ You can access the app via: http://$PUBLIC_IP:30080"
+          echo "⚠️  Add to /etc/hosts if not accessible: $PUBLIC_IP podinfo.staging"
