@@ -61,7 +61,7 @@ jobs:
             --owner=$GIT_OWNER \
             --repository=$GIT_REPO \
             --branch=$GIT_BRANCH \
-            --path=clusters/staging \
+            --path=clusters \
             --namespace=my-namespace-ns \
             --personal
       - name: Get EKS Worker Node Public IP
