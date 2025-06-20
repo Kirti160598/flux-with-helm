@@ -34,9 +34,10 @@ spec:
   values:
     controller:
       service:
-        type: "NodePort"
+        type: NodePort
         nodePorts:
           http: 30080
+          https: 30443
     admissionWebhooks:
       enabled: false
       
