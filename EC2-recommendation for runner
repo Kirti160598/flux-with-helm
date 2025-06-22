@@ -1,0 +1,8 @@
+Instance Type	t3.medium or t3.large
+vCPUs / RAM	2 vCPU / 4–8 GB RAM
+AMI	Ubuntu 22.04 LTS
+Disk Size	30–50 GB EBS (gp3 or gp2)
+Architecture	x86_64
+Networking	Public subnet with Internet Gateway
+Security Group (SG)	Allow SSH (port 22) and HTTP (80)
+IAM Role (optional)	Attach a role with EKS/EC2 read access
