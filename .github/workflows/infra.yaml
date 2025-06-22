@@ -9,8 +9,8 @@ env:
   GIT_REPO: flux-with-helm
   NODE_COUNT: 1
   GIT_BRANCH: main
-  K8S_VERSION: "1.28"
-  CLUSTER_NAME: github-eks-cluster-stag
+  K8S_VERSION: "1.32"
+  CLUSTER_NAME: github-eks-cluster-nodeport
 
 jobs:
   create-eks:
@@ -34,19 +34,6 @@ jobs:
           curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
-      - name: Create EKS Cluster
-        run: |
-          eksctl create cluster \
-            --name $CLUSTER_NAME \
-            --version $K8S_VERSION \
-            --region $AWS_REGION \
-            --nodegroup-name standard-workers \
-            --node-type $NODE_TYPE \
-            --nodes $NODE_COUNT \
-            --nodes-min 1 \
-            --nodes-max 1 \
-            --managed
-
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
@@ -82,8 +69,8 @@ jobs:
 
       - name: Wait for Flux Kustomizations to Reconcile
         run: |
-          flux wait kustomization infra-controllers -n flux-system --for=condition=ready --timeout=5m || true
-          flux wait kustomization infra-configs -n flux-system --for=condition=ready --timeout=5m || true
+          flux wait kustomization infra-controllers -n flux-system --for=condition=ready --timeout=10m || true
+          flux wait kustomization infra-configs -n flux-system --for=condition=ready --timeout=10m || true
           flux wait kustomization apps -n flux-system --for=condition=ready --timeout=5m || true
 
       - name: Wait for HelmRelease ingress-nginx to be Ready
@@ -113,7 +100,5 @@ jobs:
             --query "Reservations[*].Instances[*].PublicIpAddress" \
             --output text)
           echo "Public Node IP: $PUBLIC_IP"
-          echo "$PUBLIC_IP podinfo.staging" | sudo tee -a /etc/hosts
           curl -H "Host: podinfo.staging" http://$PUBLIC_IP:30080 || true
-          echo "➡️ You can access the app via: http://$PUBLIC_IP:30080"
-          echo "⚠️  Add to /etc/hosts if not accessible: $PUBLIC_IP podinfo.staging"
+        
