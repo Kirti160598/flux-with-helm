@@ -34,10 +34,7 @@ jobs:
           curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
-
+     
       - name: Create Namespace
         run: |
           kubectl create namespace my-namespace-ns-1 || echo "Namespace already exists"
