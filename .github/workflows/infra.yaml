@@ -14,7 +14,7 @@ env:
 
 jobs:
   create-eks:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Configure AWS Credentials
