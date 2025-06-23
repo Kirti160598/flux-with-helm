@@ -50,7 +50,7 @@ jobs:
             --nodes-min 1 \
             --nodes-max 1 \
             --managed
-      - name: Open Port 30080 in EKS Security Group
+      - name: Open Ports 30080 and 30443 in EKS Security Group
         run: |
           # Get the EC2 instance ID of the worker node
           NODE_INSTANCE_ID=$(aws ec2 describe-instances \
@@ -65,13 +65,19 @@ jobs:
             --output text)
 
           echo "Opening port 30080 on Security Group: $SECURITY_GROUP_ID"
-
-          # Open port 30080 to all IPs (insecure for production; restrict if needed)
           aws ec2 authorize-security-group-ingress \
             --group-id $SECURITY_GROUP_ID \
             --protocol tcp \
             --port 30080 \
             --cidr 0.0.0.0/0 || echo "Port 30080 may already be open"
+
+          echo "Opening port 30443 on Security Group: $SECURITY_GROUP_ID"
+          aws ec2 authorize-security-group-ingress \
+            --group-id $SECURITY_GROUP_ID \
+            --protocol tcp \
+            --port 30443 \
+            --cidr 0.0.0.0/0 || echo "Port 30443 may already be open"
+
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -92,15 +98,9 @@ jobs:
 
       - name: Install Latest Flux CLI
         run: |
-          FLUX_VERSION=$(curl -s https://api.github.com/repos/fluxcd/flux2/releases/latest | grep tag_name | cut -d '"' -f 4)
-          echo "Downloading Flux CLI version: $FLUX_VERSION"
-    
-          curl -LO "https://github.com/fluxcd/flux2/releases/download/${FLUX_VERSION}/flux_${FLUX_VERSION#v}_linux_amd64.tar.gz"
-          tar -xzf flux_${FLUX_VERSION#v}_linux_amd64.tar.gz
-          sudo mv flux /usr/local/bin/flux
+          curl -sL https://github.com/fluxcd/flux2/releases/latest/download/flux_$(curl -s https://api.github.com/repos/fluxcd/flux2/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')_linux_amd64.tar.gz -o flux.tar.gz
+          tar -xzf flux.tar.gz && sudo mv flux /usr/local/bin/
           flux --version
-          flux help | grep wait || echo "⚠️ 'wait' command not available – check flux version"
-
 
       - name: Flux Bootstrap GitHub
         env:
@@ -115,20 +115,41 @@ jobs:
 
       - name: Wait for All Flux Kustomizations to Exist
         run: |
-            for name in infra-controllers infra-configs apps; do
-              for i in {1..30}; do
-               kubectl get kustomization $name -n flux-system && break || sleep 10
-              done
-             done
-      - name: Wait for Flux Kustomizations to Reconcile
-        run: |
-          flux wait kustomization infra-controllers -n flux-system --for=condition=ready --timeout=10m || true
-          flux wait kustomization infra-configs -n flux-system --for=condition=ready --timeout=10m || true
-          flux wait kustomization apps -n flux-system --for=condition=ready --timeout=5m || true
+          for name in infra-controllers infra-configs apps; do
+            echo "Waiting for kustomization $name to appear..."
+            for i in {1..60}; do
+              kubectl get kustomization $name -n flux-system && break || sleep 10
+            done
+          done
 
-      - name: Wait for HelmRelease ingress-nginx to be Ready
+      - name: Wait for Flux Kustomizations to Be Ready
         run: |
-          flux wait helmrelease ingress-nginx -n ingress-nginx --for=condition=ready --timeout=5m || true
+          for name in infra-controllers infra-configs apps; do
+            echo "Waiting for kustomization $name to become ready..."
+            for i in {1..60}; do
+              READY=$(flux get kustomizations -n flux-system | grep $name | awk '{print $4}')
+              if [ "$READY" = "True" ]; then
+                echo "$name is ready."
+                break
+              else
+                sleep 10
+              fi
+            done
+          done
+      - name: Wait for HelmRelease ingress-nginx to Be Ready
+        run: |
+          echo "Waiting for HelmRelease ingress-nginx to become ready..."
+          for i in {1..60}; do
+            READY=$(flux get helmreleases ingress-nginx -n ingress-nginx --no-header | awk '{print $4}')
+            if [ "$READY" = "True" ]; then
+              echo "HelmRelease ingress-nginx is ready."
+              break
+            else
+              echo "Still waiting... ($i/60)"
+              sleep 10
+            fi
+          done
+
 
       - name: Check Cluster Resources
         run: |
