@@ -10,7 +10,7 @@ env:
   NODE_COUNT: 1
   GIT_BRANCH: main
   K8S_VERSION: "1.28"
-  CLUSTER_NAME: github-eks-cluster-2
+  CLUSTER_NAME: github-eks-cluster-3
 
 jobs:
   create-eks:
@@ -30,11 +30,11 @@ jobs:
           sudo mv /tmp/eksctl /usr/local/bin
       - name: Delete existing EKS cluster (if exists)
         run: |
-          if aws eks describe-cluster --name github-eks-cluster --region $AWS_REGION >/dev/null 2>&1; then
+          if aws eks describe-cluster --name github-eks-cluster-2 --region $AWS_REGION >/dev/null 2>&1; then
             echo "Cluster github-eks-cluster exists. Deleting..."
-            eksctl delete cluster --name github-eks-cluster --region $AWS_REGION
+            eksctl delete cluster --name github-eks-cluster-2 --region $AWS_REGION
           else
-           echo "Cluster github-eks-cluster does not exist. Skipping delete."
+           echo "Cluster github-eks-cluster-2 does not exist. Skipping delete."
           fi
 
           
