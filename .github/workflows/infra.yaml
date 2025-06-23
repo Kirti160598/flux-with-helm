@@ -85,11 +85,13 @@ jobs:
         run: |
           FLUX_VERSION=$(curl -s https://api.github.com/repos/fluxcd/flux2/releases/latest | grep tag_name | cut -d '"' -f 4)
           echo "Downloading Flux CLI version: $FLUX_VERSION"
-          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/fluxcd/flux2/releases/latest | grep browser_download_url | grep linux_amd64.tar.gz | cut -d '"' -f 4)
-          curl -Lo flux.tar.gz "$DOWNLOAD_URL"
-          tar -xzf flux.tar.gz
-          sudo mv flux /usr/local/bin/
+    
+          curl -LO "https://github.com/fluxcd/flux2/releases/download/${FLUX_VERSION}/flux_${FLUX_VERSION#v}_linux_amd64.tar.gz"
+          tar -xzf flux_${FLUX_VERSION#v}_linux_amd64.tar.gz
+          sudo mv flux /usr/local/bin/flux
           flux --version
+          flux help | grep wait || echo "⚠️ 'wait' command not available – check flux version"
+
 
       - name: Flux Bootstrap GitHub
         env:
