@@ -10,7 +10,7 @@ env:
   NODE_COUNT: 1
   GIT_BRANCH: main
   K8S_VERSION: "1.28"
-  CLUSTER_NAME: github-eks-cluster-1
+  CLUSTER_NAME: github-eks-cluster-2
 
 jobs:
   create-eks:
@@ -41,7 +41,28 @@ jobs:
             --nodes-min 1 \
             --nodes-max 1 \
             --managed
+      - name: Open Port 30080 in EKS Security Group
+        run: |
+          # Get the EC2 instance ID of the worker node
+          NODE_INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:eks:cluster-name,Values=$CLUSTER_NAME" "Name=instance-state-name,Values=running" \
+            --query "Reservations[*].Instances[*].InstanceId" \
+            --output text)
 
+          # Get the security group ID attached to that EC2 instance
+          SECURITY_GROUP_ID=$(aws ec2 describe-instances \
+            --instance-ids $NODE_INSTANCE_ID \
+            --query "Reservations[*].Instances[*].SecurityGroups[0].GroupId" \
+            --output text)
+
+          echo "Opening port 30080 on Security Group: $SECURITY_GROUP_ID"
+
+          # Open port 30080 to all IPs (insecure for production; restrict if needed)
+          aws ec2 authorize-security-group-ingress \
+            --group-id $SECURITY_GROUP_ID \
+            --protocol tcp \
+            --port 30080 \
+            --cidr 0.0.0.0/0 || echo "Port 30080 may already be open"
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -81,6 +102,13 @@ jobs:
             --path=clusters/staging \
             --personal
 
+      - name: Wait for All Flux Kustomizations to Exist
+        run: |
+            for name in infra-controllers infra-configs apps; do
+              for i in {1..30}; do
+               kubectl get kustomization $name -n flux-system && break || sleep 10
+              done
+             done
       - name: Wait for Flux Kustomizations to Reconcile
         run: |
           flux wait kustomization infra-controllers -n flux-system --for=condition=ready --timeout=10m || true
