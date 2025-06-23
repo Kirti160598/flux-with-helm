@@ -3,14 +3,14 @@ name: Create EKS Cluster
 on: workflow_dispatch
 
 env:
-  AWS_REGION: us-west-2
+  AWS_REGION: us-east-1
   NODE_TYPE: t3.medium
   GIT_OWNER: Kirti160598
   GIT_REPO: flux-with-helm
   NODE_COUNT: 1
   GIT_BRANCH: main
-  K8S_VERSION: "1.32"
-  CLUSTER_NAME: my-eks-cluster
+  K8S_VERSION: "1.28"
+  CLUSTER_NAME: github-eks-cluster
 
 jobs:
   create-eks:
@@ -28,6 +28,19 @@ jobs:
         run: |
           curl --silent --location "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
+          
+      - name: Create EKS Cluster
+        run: |
+          eksctl create cluster \
+            --name $CLUSTER_NAME \
+            --version $K8S_VERSION \
+            --region $AWS_REGION \
+            --nodegroup-name standard-workers \
+            --node-type $NODE_TYPE \
+            --nodes $NODE_COUNT \
+            --nodes-min 1 \
+            --nodes-max 1 \
+            --managed
 
       - name: Install kubectl
         run: |
