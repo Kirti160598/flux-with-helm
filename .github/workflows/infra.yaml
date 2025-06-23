@@ -28,6 +28,15 @@ jobs:
         run: |
           curl --silent --location "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
           sudo mv /tmp/eksctl /usr/local/bin
+      - name: Delete existing EKS cluster (if exists)
+        run: |
+          if aws eks describe-cluster --name github-eks-cluster --region $AWS_REGION >/dev/null 2>&1; then
+            echo "Cluster github-eks-cluster exists. Deleting..."
+            eksctl delete cluster --name github-eks-cluster --region $AWS_REGION
+          else
+           echo "Cluster github-eks-cluster does not exist. Skipping delete."
+          fi
+
           
       - name: Create EKS Cluster
         run: |
