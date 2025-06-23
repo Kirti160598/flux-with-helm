@@ -3,14 +3,14 @@ name: Create EKS Cluster
 on: workflow_dispatch
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: us-west-2
   NODE_TYPE: t3.medium
   GIT_OWNER: Kirti160598
   GIT_REPO: flux-with-helm
   NODE_COUNT: 1
   GIT_BRANCH: main
   K8S_VERSION: "1.32"
-  CLUSTER_NAME: github-eks-cluster-nodeport
+  CLUSTER_NAME: my-eks-cluster
 
 jobs:
   create-eks:
