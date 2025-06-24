@@ -10,7 +10,7 @@ env:
   NODE_COUNT: 1
   GIT_BRANCH: main
   K8S_VERSION: "1.28"
-  CLUSTER_NAME: github-eks-cluster-k
+  CLUSTER_NAME: github-eks-cluster-1
 
 jobs:
   create-eks:
@@ -34,7 +34,7 @@ jobs:
             echo "Cluster github-eks-cluster exists. Deleting..."
             eksctl delete cluster --name github-eks-cluster-2 --region $AWS_REGION
           else
-           echo "Cluster github-eks-cluster-2 does not exist. Skipping delete."
+           echo "Cluster github-eks-cluster-k does not exist. Skipping delete."
           fi
 
           
@@ -92,9 +92,19 @@ jobs:
 
       - name: Install Latest Flux CLI
         run: |
-          curl -sL https://github.com/fluxcd/flux2/releases/latest/download/flux_$(curl -s https://api.github.com/repos/fluxcd/flux2/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')_linux_amd64.tar.gz -o flux.tar.gz
-          tar -xzf flux.tar.gz && sudo mv flux /usr/local/bin/
+          # Get latest Flux version (e.g. v2.3.0)
+          FLUX_VERSION=$(curl -s https://api.github.com/repos/fluxcd/flux2/releases/latest | grep '"tag_name":' | cut -d '"' -f 4)
+
+          echo "Installing Flux version: $FLUX_VERSION"
+  
+          # Download correct tarball (remove 'v' for file name only)
+          curl -sL https://github.com/fluxcd/flux2/releases/latest/download/flux_${FLUX_VERSION#v}_linux_amd64.tar.gz -o flux.tar.gz
+          tar -xzf flux.tar.gz 
+
+          # Move to path and check version
+          sudo mv flux /usr/local/bin/
           flux --version
+
 
       - name: Flux Bootstrap GitHub
         env:
