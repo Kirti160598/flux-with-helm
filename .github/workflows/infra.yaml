@@ -10,7 +10,7 @@ env:
   NODE_COUNT: 1
   GIT_BRANCH: main
   K8S_VERSION: "1.28"
-  CLUSTER_NAME: github-eks-cluster-4
+  CLUSTER_NAME: github-eks-cluster-k
 
 jobs:
   create-eks:
@@ -50,7 +50,7 @@ jobs:
             --nodes-min 1 \
             --nodes-max 1 \
             --managed
-      - name: Open Ports 30080 and 30443 in EKS Security Group
+      - name: Open Ports 30080 in EKS Security Group
         run: |
           # Get the EC2 instance ID of the worker node
           NODE_INSTANCE_ID=$(aws ec2 describe-instances \
@@ -71,13 +71,7 @@ jobs:
             --port 30080 \
             --cidr 0.0.0.0/0 || echo "Port 30080 may already be open"
 
-          echo "Opening port 30443 on Security Group: $SECURITY_GROUP_ID"
-          aws ec2 authorize-security-group-ingress \
-            --group-id $SECURITY_GROUP_ID \
-            --protocol tcp \
-            --port 30443 \
-            --cidr 0.0.0.0/0 || echo "Port 30443 may already be open"
-
+        
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -175,5 +169,5 @@ jobs:
             --output text)
           echo "Public Node IP: $PUBLIC_IP"
           curl -H "Host: podinfo.staging" http://$PUBLIC_IP:30080 || true
-          curl -H "Host: podinfo.staging" https://$PUBLIC_IP:30443 || true
+         
         
